@@ -1,0 +1,43 @@
+# 'group' parameter to group defaults, common parameters, and caches
+# dynamic reload
+# #define, #undef, and macro declarations in blocks
+# 'source' parameter to load templates from string or arrays
+
+>1. !	POD & tests
+>23.	load all templates as objects, not just those explicitly loaded by the user
+>1.5 	dynamically reload a template if it has been modified, stat->mtime
+>20.	"[^"]+ vs "[\w+?]"; need to improve the double-quote regex, ensure that escaped quotes are not included
+>4.	change _generate_code() to build the wrapper code, not just the code inside the braces; i.e. build the entire block, e.g.
+	"subroutine abc($$) { gjunk; gunk; };"	the whole she-bang!
+>16.	elminate 'my $X= $ABC->{X}'; instead use $ABC->{X} everywhere, will facilitate deployment of #define/#undef ?
+>17.	in the block's macro-list, include the macro's type
+>3.	need to check that a KEY is not already being used, i.e. ! exists $PAGE_CACHE{KEY}
+>5.5	accept template text from sources other than files, e.g. scalars or arrays;  use SOURCE attribute ?
+>6.	enable the user to load a template from a scalar or array via a SOURCE option; this requires some additional finagling
+	with KEY and FILE options.  I actually got this to work and overwrote it; it turned out to be more work than I
+	originally expected it to be.  Be wary!  One trick I played was to index SOURCE and FILE array element.
+7.	add a 'group' parameter to group templates together into the same package with the same defaults and the same caches
+2.  !	separate _parse() and _generate_code(); these are two distinctly separate stages and should be executed in separate scopes
+19. !	improve error-trapping.  in eval "@$code", execute die on errors; eval { _parse }; _parse { ... die ... };
+5.	'first( BLOCK/EXPR, array-ref)' returns first occurence of true evaluation of the BLOCK/EXPRession provided into array
+8.  !	split the block stack into two stacks, one for text and one for macroes, for finer control and better scalability
+9.	try to think trees instead of stacks, before it gets too late and it turns into a big mess
+10. !	get rid of the "magic"; use references instead of globs.  processing is done on front, so use it.  after all...
+11. !	...if template prep-time becomes a nuisance then provide method to pre-parse templates and save the subs/templates in a file
+12.	macro declarations for FOR loops; then globals variables would be accessible from inside a loop
+13.	#define and #undef; substitute during parse and output
+14.	be able to specify an #include file via a parameter,, e.g. "#include ##SPECIAL_BODY##"
+15.	define a 'statement' structure in same capacity as 'block' structures used; #define, #undef, #include
+21. ?	if a template is not being cached then the destruction of the object needs to include the subroutine; perhaps
+	this is a bad idea since a template might include other templates that another template has cached;
+	maybe templates should be cached forcibly
+22.	additional public instance methods to provide visibility into the object, such as
+	key()		--> returns the key associated with this template object
+	filename()	--> returns the full pathname of the file from which the the templated object was loaded
+	group()		--> returns group of which this template is a member
+	path()		--> return the path for the group/object
+	includes()	--> list of templates included by a template
+23.	additional public class methods
+	files()		--> lists files in a group
+	templates()	--> list templates available in a group by key
+

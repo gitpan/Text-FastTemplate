@@ -1,0 +1,14 @@
+FastTemplate.pm
+FastTemplate.pod
+INSTALL
+MANIFEST
+Makefile.PL
+README
+TODO
+test.pl
+test_templates/else.tpl
+test_templates/elsif.tpl
+test_templates/for.tpl
+test_templates/if.tpl
+test_templates/include.tpl
+test_templates/included.tpl
