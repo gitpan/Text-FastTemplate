@@ -16,3 +16,4 @@ test_templates/simple2.tpl
 test_templates/simple3.tpl
 test_templates/simple4.tpl
 test_templates/simple5.tpl
+FastTemplate.spec

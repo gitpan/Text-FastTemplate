@@ -8,9 +8,9 @@ use 5.005_05;
 
 use Carp;
 use Cwd qw/ abs_path /;
-use Data::Dumper;
+#use Data::Dumper;
 
-$VERSION = '0.94';
+$VERSION = '0.95';
 
 # object attributes
 use constant FC                 =>  0;
