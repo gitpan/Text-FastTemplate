@@ -8,7 +8,7 @@ Text::FastTemplate - Class that compiles text templates into subroutines.
 
   # It can be as simple as ...
 
-  Text::FastTemplate->new( file => 'template')->print( \%data);
+  print Text::FastTemplate->new( file => 'template')->print( \%data);
 
   # or as complex as ...
 
@@ -26,6 +26,21 @@ Text::FastTemplate - Class that compiles text templates into subroutines.
   $report= new Text::FastTemplate key => 'the_page';
   $output= $report->output( \%data );
   print $output;
+
+=head1 NEW FEATURES
+
+=over 4
+
+=item 1.
+
+Text::FastTemplate now supports dynamic reload of templates via the 'reload' constructor attribute.
+
+=item 2.
+
+Text::FastTemplate now allows the programmer to organize template objects and defaults into groups
+via the 'group' constructor attribute.
+
+=back
 
 =head1 DESCRIPTION
 
@@ -46,24 +61,24 @@ the templates and the application logic must be completely separate.
 =back
 
 As a template processor, its core purpose is to provide macro-substition into a text template that is
-provided by the user.  Simple macro substitution hardly comprises a useful template processor.
+provided by the user.  However, simple macro substitution hardly comprises a useful template processor.
 
 In order to be truly useful, Text::FastTemplate implements two simple flow-control mechanisms
 and a mechanism for including additional templates.
 
 In the end, Text::FastTemplate provides excellent control of the presentation while maintaining responsibilities
-of the proper individuals.  The designers are responsible for the design.  The programmers are responsible
-for the application.
+of the proper individuals by enforcing complete separation of the presentation and the application.  The designers
+are responsible for the design.  The programmers are responsible for the application.
 
-One of my favourite applications of this module is to derive a Page class from it.  The Page class overrides the
+One of my common applications of this module is to derive a Page class from it.  The Page class overrides the
 output() method with its own method that includes common macroes in every message passed to the object, such as a
-DATE or USER_ID string.  The Page class can also have an import function that set defaults and preloads the
+DATE or USER_ID string.  The Page class can also have an import() function that set defaults and preloads the
 templates.
 
 =head1 TEMPLATE METHODS
 
 To start using Text::FastTemplate immediately, you only need to know two methods,
-L<new()|"Constructors & Attributes"> and L<print()|"Object Methods">.
+L<new()|"Constructors & Attributes"> and L<output()|"Object Methods">.
 
 =head2 Constructors & Attributes
 
@@ -79,6 +94,15 @@ It was designed to be used in conjuntion with the preload() class method.
 
 path = this is a list of directories that are to be searched with a relative pathname is used as in 'file'.
 
+group = this designates the group for which to use defaults and object cache.  Each group has its own object cache
+which enables the caller to use the same KEY in different groups.
+
+reload = by setting this to true, Text::FastTemplate will reload all of the template files that are used by this
+template that have been modified.  It checks the mtime of the files.  So all that is necessary to force a reload is
+to 'touch' the file that should be reloaded.
+
+debug = setting this to true prints some debugging information.  This is only partially useful.
+
 preload() = This class method simply loads a list of templates by instantiating an object [ new() ] for each
 template in the list that is passed to it.   This purpose of this method is to bypass the normal latency associated
 with reading and compiling a template the first time.  It expects an array-ref to a list of hash-references.
@@ -92,10 +116,14 @@ The contents of these hashes are passed to new() one at a time.
 	{ file => 'file3.txt', key => 'file3' },
     ]);
 
-=head2 Object Methods
+p=head2 Object Methods
 
-output(), print() = These methods take the data provided by the user in a hash and plug it into the compiled template.
-output() returns a scalar that contains the resultant text.  print() actually prints the text.
+output() = These methods take the data provided by the user in a hash and plug it into the compiled template.
+output() returns a scalar that contains the resultant text.
+
+print() = This method actually sends the the output of output() to STDOUT.  This method might or might not be deleted
+in a future version unless a lot of people use it.  It might be better to save this for a derived class which can send
+the output to a customized file-handle.
 
 These are identical:
 
@@ -104,8 +132,10 @@ These are identical:
 
 =head2 Class Methods
 
-defaults() = this is used to set default attributes that are to be used whenever a new object is instantiated.  It is useful
-during a preload phase of a program.  Currently, the 'path' attribute is the only useful attributed affected.
+This is the last section about Text::FastTemplate methods because these methods are not required
+
+defaults() = this is used to set default values for constructor attributes, 'PATH', 'RELOAD' and 'DEBUG'.  these
+defaults values are used whenever a new object is instantiated.  It is useful during a preload phase of a program.  The 
 For example,
 
     Text::FastTemplate->defaults( path => '/apps/sales/pages');
@@ -113,6 +143,21 @@ For example,
 	{ file => 'page1.txt', key => 'page1' },
 	{ file => 'page2.txt', key => 'page2' },
 	]);
+
+If the 'GROUP' attribute is sent to defaults() then these default values are assigned to the specified group so that, whenever
+that group is used in a succeeding constructor, the defaults that are assigned to that group are used to instantiate that
+object.  For example,
+
+    Text::FastTemplate->defaults( group => 'example', path => '/apps/mfg/pages', reload => 1);
+    Text::FastTemplate->new( key => 'a', file => 'a.tpl', group => 'example');
+    Text::FastTemplate->new( key => 'b', file => 'b.tpl', group => 'example');
+    Text::FastTemplate->new( key => 'c', file => 'c.tpl', group => 'example');
+
+These calls assign the example 'path' and 'reload' values to the 'example' group.  During the calls to new() in which the
+'example' group is specified, those default values are used to instantiate the template objects.
+
+This attribute is not necessary since a default group, '_default', will be automatically assigned to the object without the
+caller's knowledge.
 
 =head1 TEMPLATE SYNTAX
 
@@ -301,20 +346,15 @@ several web sites.  They have been targeted for elimination.
 
 =item 1.
 
-Once loaded, the templates are static for the life of the process.  In order to load updated templates,
-the program needs to be restarted.
-
-=item 2.
-
 Macro scopes are poorly handled.  Consider a #for loop around some HTML tags that refer to a ##BGCOLOR## macro that is
 commonly used.  The #for loop will not access the ##BGCOLOR## macro used outside of the loop.  The ##BGCOLOR##
 macro needs to be included in the data that is passed to the #for loop.
 
+=item 2.
+
+Infinite recursion with the #include statement is not checked.  Care should be taken to avoid it.  One of the easiest cases in which this might happen is with circular inclusions.  This is the same problem as with Perl's circular references and garbage collection.  It shouldn't be new to anyone.
+
 =item 3.
-
-Infinite recursion with the #include statement is not checked.  Care should be taken to avoid it.
-
-=item 4.
 
 If the any line of the actual content of a template starts with a keyword then it will be processed by Text::FastTemplate.
 
@@ -330,17 +370,9 @@ Error handling could be much better.
 
 =item 1.
 
-Implement on-line template reloads, both automatic and forced manual.
-
-=item 2.
-
-Add a "group" attribute to group Text::FastTemplate objects and attributes like path and dynamic reload.
-
-=item 3.
-
 Add "#define" and "#undef" to template syntax; will require that handling of macro scope be improved.
 
-=item 4.
+=item 2.
 
 Add "source" attribute so that strings and arrays can be used for templates.
 
@@ -360,6 +392,10 @@ modify it under the same terms as Perl itself.
 
 Caveat emptor.  Use this module at your own risk.  I will accept no responsibility any loss of any kind
 that is the direct or indirect result of the use of this module.
+
+=head1 DEPENDENCIES
+
+Perl modules: Cwd, Carp;b
 
 =head1 SEE ALSO
 
