@@ -7,7 +7,7 @@ use vars qw/ $VERSION %FILE_CACHE %PAGE_CACHE %CODE_CACHE @DEFAULTS /;
 use Carp;
 use File::Basename qw/ dirname /;
 
-$VERSION = '0.9';
+$VERSION = '0.91';
 
 # template tokens / block types
 use constant BASIC		=> 0;
@@ -507,7 +507,7 @@ sub _generate_block_code
 			}
 			elsif ( $blocks->[$block_index]->[BLOCK_TYPE] == IF )
 			{
-				( my $expression= $macro ) =~ s/##(\w+)##/\$$1/g;
+				( my $expression= $macro ) =~ s/##(\w+)##/\${$1}/g;
 				push @block_code,
 					sprintf( "\tif ( %s ) {\n", $expression),
 					$self->_generate_block_code( $block_index, $blocks, $template),
@@ -535,7 +535,7 @@ sub _generate_block_code
 		else
 		{
 			$b =~ s/([@\$"\\])/\\$1/g;
-			$b =~ s/##(\w+?)##/\$$1/g;
+			$b =~ s/##(\w+?)##/\${$1}/g;
 			push @block_code, "\t\t\"$b\\n\"" . ( ref $z || ( $i == $#$code ) ? ";\n" : ".\n" );
 		}
 	};

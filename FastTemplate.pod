@@ -12,7 +12,7 @@ Text::FastTemplate - Class that compiles text templates into subroutines.
 
   # or as complex as ...
 
-  Text::FastTemplate->default(
+  Text::FastTemplate->defaults(
     path => [
       '/apps/sales/heads_n_feet',
       '/apps/sales/content'
