@@ -3,12 +3,14 @@ package Text::FastTemplate;
 use strict;
 use integer;
 use vars qw/ $VERSION %FILE_CACHE %OBJECT_CACHE %DEFAULTS $DEFAULT_GROUP /;
+no warnings;
+use 5.005_05;
 
 use Carp;
 use Cwd qw/ abs_path /;
 use Data::Dumper;
 
-$VERSION = '0.93';
+$VERSION = '0.94';
 
 # object attributes
 use constant FC                 =>  0;
@@ -28,7 +30,7 @@ $DEFAULTS{$DEFAULT_GROUP}->[PATH]= [ '.' ];
 $DEFAULTS{$DEFAULT_GROUP}->[RELOAD]= 0;
 $DEFAULTS{$DEFAULT_GROUP}->[DEBUG]= 0;
 
-# FILE_CACHE indexes
+# FILE_CACHE indices
 use constant FC_FILENAME        => 6;
 use constant FC_MTIME           => 0;
 use constant FC_INCLUDES        => 1;
@@ -71,76 +73,71 @@ use constant MACRO		=> 1;
 #########										#########
 #################################################################################################
 
-sub defaults
-{
-#warn "defaults()";
-	my $class= shift;
-	my( %a, @a);
+sub defaults {
+  #warn "defaults()";
+  my $class= shift;
+  my @h;
 
-	%a= @_;
-	map { my $k= uc $_; $a{$k}= delete $a{$_} } keys %a;
+  @h= ref $_[0] ? @_ : { @_ };
 
-        $a{GROUP} ||= $DEFAULT_GROUP;
+  for my $h ( @h ) {
+    my @a;
 
-	# convert the hash into an array
-	foreach my $k ( qw/ GROUP PATH RELOAD DEBUG / )
-	{
-	    $a[eval($k)]= $a{$k};
-	}
+    map { my $k= uc $_; $h->{$k}= delete $h->{$_} } keys %$h;
 
-	foreach my $i ( 0 .. ATTRIBUTES_NUM )
-	{
-	    $DEFAULTS{$a{GROUP}}->[$i]= $a[$i] || $DEFAULTS{$DEFAULT_GROUP}->[$i];
-	};
+    $h->{GROUP} ||= $DEFAULT_GROUP;
 
-	return $class;
+    # convert the hash into an array
+    foreach my $k ( qw/ GROUP PATH RELOAD DEBUG / ) {
+      $a[eval($k)]= $h->{$k};
+    }
+
+    foreach my $i ( 0 .. ATTRIBUTES_NUM ) {
+      $DEFAULTS{$h->{GROUP}}->[$i]= $a[$i] || $DEFAULTS{$DEFAULT_GROUP}->[$i];
+    }
+  }
+
+  return $class;
 }
 
 #############################################################################################
 
 sub preload
-{
-#warn "preload()";
-	my $class= shift;
-	my $files= shift;
-	my $templates;
+  {
+    #warn "preload()";
+    my $class= shift;
+    my( $failures, %common);
 
-	# $files needs to be a ARRAY-REF to a list of HASH-REFs
-	# WHAT ????????  it needs to be an ARRAY-REF ????????
-	# why not a list of HASH-REFs ???????
-	return undef if ref $files ne 'ARRAY';
+    if ( ref $_[0] eq 'ARRAY' ) {
+      carp "Unnecessary use of ARRAY-REF in call to ${class}::preload()";
+      @_= @{$_[0]};
+    }
 
-	for my $x ( @$files )
-	{
-	    if ( ref $x ne 'HASH' )
-	    {
-		# only HASH-REFs should be passed
-		return undef;
-	    }
+    my @list= @_;
+    while ( @list ) {
+      my $x= shift @list;
+      if ( ! ref $x ) {
+	my $k= uc $x;
+	$common{$k}= shift @list;
+	next;
+      }
 
-	    map { my $k= uc $_; $x->{$k}= delete $x->{$_} } keys %$x;
-	    if ( ! exists $x->{KEY} )
-	    {
-		# the KEY parameter needs to be specified with preload()
-		return undef;
-	    }
-	}
+      map { my $k= uc $_; $x->{$k}= delete $x->{$_} } keys %$x;
+      if ( ! exists $x->{KEY} ) {
+	# the KEY parameter needs to be specified with preload()
+	return undef;
+      }
 
-	for my $x ( @$files )
-	{
-	    if ( $class->new( %$x) )
-	    {
-	      $templates++;
-	    }
-	    else
-	    {
-	      carp "Failed to instantiate template, key= $x->{KEY}.";
-	      last;
-	    }
-	}
+      my %parms= ( %$x, %common);
+      if ( ! $class->new( %parms) ) {
+#	carp "Failed to instantiate template, KEY= $parms{KEY}," .
+#	  (( $parms{GROUP} ne $DEFAULT_GROUP ) && " GROUP=$parms{GROUP}," );
+	$failures++;
+      }
+    }
 
-	return ( $templates - @$files ) ? 0 : 1;
-}
+    return $failures ? 0 : 1;
+  }
 
 #############################################################################################
 
@@ -148,7 +145,7 @@ sub new
 {
 #    warn "new()";
     my $class= shift;
-    my( $self, $reload, $debug, %a, @a, $defaults);
+    my( $self, $reload, $debug, %a, @a);
 
     %a= @_;
     map { my $k= uc $_; $a{$k}= delete $a{$_} } keys %a;
@@ -171,14 +168,15 @@ sub new
 	else
 	{
 	    carp "$msg; template marked to be reloaded" if $debug;
-	    $self= [ @$self ];
+	    $self= \@$self;
 	    $self->[KEY]= undef;
 	    $self->[RELOAD]= $reload;
 	}
     }
     elsif ( ! $a{FILE} )
     {
-	carp "No template has been cached with KEY=$a{KEY}";
+	carp "No template has been cached with KEY=$a{KEY}," .
+	  (( $a{GROUP} ne $DEFAULT_GROUP ) && " GROUP=$a{GROUP}," );
 	return undef;
     }
     else
@@ -201,8 +199,7 @@ sub new
 	    $a[eval($k)]= $v;
 	}
 
-	$defaults=  $DEFAULTS{$a[GROUP]};
-	for my $i ( 0 .. ATTRIBUTES_NUM )
+	for ( my $i= 0, my $defaults= $DEFAULTS{$a[GROUP]}; $i <= ATTRIBUTES_NUM; $i++ )
 	{
 	    $self->[$i]= $a[$i] || $defaults->[$i];
 	};
@@ -229,19 +226,94 @@ sub output
 
 #############################################################################################
 
-sub print
-{
-#warn "print()";
-	my $self= shift;
-	print $self->output( @_);
+sub print {
+  #warn "print()";
+  my $self= shift;
+  print $self->output( @_);
 }
 
 #############################################################################################
 
-sub filename
-{
-#warn "filename()";
-	return $_[0]->[FC]->[FC_FILENAME];
+sub key {
+  #warn "key()";
+  return $_[0]->[KEY];
+}
+
+#############################################################################################
+
+sub group {
+  #warn "group()";
+  return $_[0]->[GROUP];
+}
+
+#############################################################################################
+
+sub file {
+  #warn "file()";
+  return $_[0]->[FILE];
+}
+
+#############################################################################################
+
+sub filename {
+  #warn "filename()";
+  return $_[0]->[FC]->[FC_FILENAME];
+}
+
+#############################################################################################
+
+sub includes {
+  #warn "includes()";
+  return @{$_[0]->[INCLUDES]};
+}
+
+#############################################################################################
+
+sub path {
+  #warn "path()";
+  my( $a, %a)= @_;
+  my $b;
+  if ( ref $a ) {
+    $b= $a->[PATH];
+  } else {
+    my $group= ( map { ( lc( $_) eq 'group' ) && $a{$_} } keys %a )[0] || $DEFAULT_GROUP;
+    $b= $DEFAULTS{$group}->[PATH];
+  }
+
+  return $b ? @$b : undef;
+}
+
+#############################################################################################
+
+sub templates {
+  #warn "templates()";
+  my( $class, %a)= @_;
+  my( @b, $group);
+
+  $group= ( map { ( lc( $_) eq 'group' ) && $a{$_} } keys %a )[0] || $DEFAULT_GROUP;
+  @b= grep { $_->[GROUP] eq $group } values %OBJECT_CACHE;
+
+  return @b;
+}
+
+#############################################################################################
+
+sub filenames {
+  #warn "filenames()";
+  my $class= shift;
+  my @b;
+
+  return map { $_->filename() } $class->templates( @_);
+}
+
+#############################################################################################
+
+sub keys {
+  #warn "keys()";
+  my $class= shift;
+  my @b;
+
+  return map { $_->key() } $class->templates( @_);
 }
 
 #################################################################################################
@@ -348,7 +420,7 @@ sub _scrub_template
 
 	my $x= $fc->[$i];
 
-	next if $x !~ /^\s*#\s*(?:include|for|endfor|if|elsif|else|endif)(?:\s+.*|\s*\\\s*)?$/ix;
+	next if $x !~ /^\s*#\s*(?:include|for|endfor|if|elsif|else|endif)(?:\s+.*|\s*\\\s*)?$/i;
 
 	while ( $x =~ s/\s*\\\s*$// )
 	{
@@ -359,8 +431,9 @@ sub _scrub_template
 	    ;
 	}
 
-	$x =~ s/^\s+//;
-	$x =~ s/\s+$//;
+#	$x =~ s/^\s+//;
+#	$x =~ s/\s+$//;
+	$x =~ s/^\s*(.*?)\s*$/$1/;
 	$x =~ s/\s+/ /g;
 
 	$fc->[$i]= $x;
@@ -703,7 +776,8 @@ sub _find_file
 
     # scrub the file here; remove '..'
     # why bother when absolute paths are accepted, e.g. /etc/shadow?
-    # return undef if $file =~ m*(?:^\.\./|/\.\./*;
+    # return undef if $file =~ m*\Q../*;
+    # prohibit absolute paths and scrub '../' ???
 
     if ( $file =~ m:^/: )
     {
@@ -757,5 +831,9 @@ sub _load_includes
 }
 
 #############################################################################################
+
+# Local variables:
+# mode:cperl
+# End:
 
 1;

@@ -28,19 +28,35 @@ BEGIN
 
     push @tests,
     undef, undef,
-    sub { Text::FastTemplate->defaults( path => [ 'test_templates' ]) },
-    sub { Text::FastTemplate->preload( [
+    sub { Text::FastTemplate->defaults(
+				       { path => [ 'test_templates' ] },
+				       { 
+					   group => 'test',
+					   path => [ 'test_templates' ],
+				       },
+				       )
+	  },
+    sub { ! Text::FastTemplate->new( key => 'simple0',	file => 'simple0.tpl') },
+    sub { Text::FastTemplate->preload(
 					{ key => 'simple1',	file => 'simple1.tpl'	},
 					{ key => 'simple2',	file => 'simple2.tpl'	},
 					{ key => 'simple3',	file => 'simple3.tpl'	},
 					{ key => 'simple4',	file => 'simple4.tpl'	},
 					{ key => 'simple5',	file => 'simple5.tpl'	},
-					{ key => 'if',	file => 'if.tpl'	},
+				      )
+	  },
+    sub { ! Text::FastTemplate->preload(
+					{ key => 'if',	        file => 'if.tpl'	},
 					{ key => 'elsif',	file => 'elsif.tpl'	},
 					{ key => 'else',	file => 'else.tpl'	},
-					{ key => 'for',	file => 'for.tpl'	},
-					]) },
+					{ key => 'for',	        file => 'for.tpl'	},
+					group => 'test',
+					{ key => 'simple0',	file => 'simple0.tpl'	},
+					{ key => 'simple1',	file => 'simple1.tpl'	},
+					)
+	  },
     sub { Text::FastTemplate->new( key => 'simple1')->output( $A) eq "1\n" },
+    sub { Text::FastTemplate->new( key => 'simple1', group => 'test')->output( $A) eq "1\n" },
     sub { Text::FastTemplate->new( key => 'simple2')->output( $A) eq "come1\n" },
     sub { Text::FastTemplate->new( key => 'simple3')->output( $A) eq "1not there\n" },
     sub { Text::FastTemplate->new( key => 'simple4')->output( $A) eq "1HERE##\n" },
@@ -64,11 +80,6 @@ BEGIN
 
       Text::FastTemplate->new( key => 'reload', file => 'reload.tpl');
 
-#  	warn;
-#  	warn "XXX" . Text::FastTemplate->new( key => 'reload', file => 'reload.tpl')->output();
-#  	warn sprintf( "XXX 0x%0s\n", unpack( "H*", $str));
-#  	warn sprintf( "XXX 0x%0s\n", unpack( "H*", Text::FastTemplate->new( key => 'reload')->output()));
-
 	return undef if Text::FastTemplate->new( key => 'reload')->output() ne $str;
 
 	$str= $str2;
@@ -77,14 +88,8 @@ BEGIN
 	$fh->close();
 
 	utime( time, time+100, $fn);
-        Text::FastTemplate->new( key => 'reload', reload => 1);
-
-#  	warn;
-#  	warn "XXX" . Text::FastTemplate->new( key => 'reload', file => 'reload.tpl')->output();
-#  	warn sprintf( "XXX 0x%0s\n", unpack( "H*", $str));
-#  	warn sprintf( "XXX 0x%0s\n", unpack( "H*", Text::FastTemplate->new( key => 'reload')->output()));
+      Text::FastTemplate->new( key => 'reload', reload => 1);
 
 	return ( Text::FastTemplate->new( key => 'reload', reload => 1)->output() eq $str2 ) ? 1 : 0;
     },
-    ;
 }

@@ -4,7 +4,6 @@ INSTALL
 MANIFEST
 Makefile.PL
 README
-TODO
 test.pl
 test_templates/else.tpl
 test_templates/elsif.tpl

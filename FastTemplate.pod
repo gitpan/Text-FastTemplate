@@ -2,13 +2,12 @@
 
 Text::FastTemplate - Class that compiles text templates into subroutines.
 
-=head1 SYNOPSIS
-
-  use Text::FastTemplate;
+=head1 GETTING STARTED
 
   # It can be as simple as ...
 
-  print Text::FastTemplate->new( file => 'template')->print( \%data);
+  Text::FastTemplate->new( file => 'template')
+	->print( \%data);
 
   # or as complex as ...
 
@@ -23,90 +22,167 @@ Text::FastTemplate - Class that compiles text templates into subroutines.
     { file => 'template.txt', key => 'the_page' }
     ]);
 
-  $report= new Text::FastTemplate key => 'the_page';
+  $report= Text::FastTemplate->new( key => 'the_page');
   $output= $report->output( \%data );
   print $output;
 
 =head1 NEW FEATURES
 
-=over 4
+=over
 
-=item 1.
+These features were added for the most recent releases.
 
-Text::FastTemplate now supports dynamic reload of templates via the 'reload' constructor attribute.
+=item *
 
-=item 2.
+For preload(), the programmer now can use an array to pass the list of templates to
+be loaded; an ARRAY-REF is no longer required and is deprecated.
 
-Text::FastTemplate now allows the programmer to organize template objects and defaults into groups
-via the 'group' constructor attribute.
+=item *
+
+Defaults for more than one group can be created with a single call to the defaults()
+class method, versus a call for each group as was previously required.
+
+=item *
+
+In addition to the template list, the preload() class method accepts
+a list of common attributes for each of the specified templates.
+
+=item *
+
+Templates which have been modified since being loaded can now be dynamically reloaded
+via the 'reload' constructor attribute.
+
+=item *
+
+The programmer can organize template objects and defaults into groups via the 'group'
+and 'key' constructor attributes.
 
 =back
 
 =head1 DESCRIPTION
 
-Text::FastTemplate compiles templates that are written in a syntax that resembles C-preprocessor syntax into Perl subroutines.
+Text::FastTemplate compiles templates that are written in a line-oriented syntax that
+resembles the C-preprocessor syntax into Perl subroutines.  As much as possible, it
+is designed to be:
 
-Text::FastTemplate was built around two guidelines.
+=over
 
-=over 4
+=item Simple
 
-=item 1.
+the API and the template syntax are very simple.
 
-the template syntax must be rudimentary.
+=item Fast
 
-=item 2.
+the generation of the template output is very fast, as fast as perl can print anyway.
 
-the templates and the application logic must be completely separate.
+=item Maintainable
+
+the application and the presentation are completely separated.
 
 =back
 
-As a template processor, its core purpose is to provide macro-substition into a text template that is
-provided by the user.  However, simple macro substitution hardly comprises a useful template processor.
+As a template processor, its core purpose is to provide macro-substition into a text
+template that is provided by the user.  However, simple macro substitution hardly
+comprises a useful template processor.
 
-In order to be truly useful, Text::FastTemplate implements two simple flow-control mechanisms
-and a mechanism for including additional templates.
+In order to be truly useful, Text::FastTemplate implements two simple flow-control
+mechanisms:
 
-In the end, Text::FastTemplate provides excellent control of the presentation while maintaining responsibilities
-of the proper individuals by enforcing complete separation of the presentation and the application.  The designers
-are responsible for the design.  The programmers are responsible for the application.
+	loops or repetitive text:
+		#for / #endfor
 
-One of my common applications of this module is to derive a Page class from it.  The Page class overrides the
-output() method with its own method that includes common macroes in every message passed to the object, such as a
-DATE or USER_ID string.  The Page class can also have an import() function that set defaults and preloads the
-templates.
+	conditions or optional text:
+		#if / #elsif / #else / #endif
+
+and a mechanism for including additional templates
+
+	external template inclusion:
+		#include
+
+In the end, Text::FastTemplate provides simple yet powerful interface between the
+application and the presentation layer that provides both the programmer and the
+presentation designer excellent control over their respective components.
+
+One of my common applications of this module is to derive a Page class from it.  The
+Page class overrides the output() method with a method that adds some macroes to
+every message passed to the object, such as a DATE or USER_ID string.  The Page class
+can also have an import() function that set defaults and preloads templates.
+
+=head1 USAGE
+
+This POD has been written as a quick reference to help the programmer start using
+Text::FastTemplate quickly.  Comprehensive documentation with examples and references
+will be available at the Text::FastTemplate web site.
+
+	http://bozzio.the-lehrs.com/Text::FastTemplate/
 
 =head1 TEMPLATE METHODS
 
-To start using Text::FastTemplate immediately, you only need to know two methods,
-L<new()|"Constructors & Attributes"> and L<output()|"Object Methods">.
+To start using Text::FastTemplate immediately, one needs only two methods,
+new() and output().
 
-=head2 Constructors & Attributes
+=head2 The constructor: new()
 
-new() = This is the constructor.  It expects a hash and returns a Text::FastTemplate object.  Although several
-attributes are available, only the 'file' attribute is required.
+As the constructor, new() expects a hash and returns a Text::FastTemplate object.
+Several attributes provide the programmer with useful parameters for organizing
+templates.  However, each call to new() requires only that either the 'file' or the
+'key' attribute be provided.
 
-file = this is the name of the template to be loaded.  It can be an absolute or relative pathname.  If a relative
-pathname is used then the directories specified in 'path' are searched.  If 'path' is not specified then
-the current working directory for the process is searched.
+  + file	the name of the file that contains the template
+  + key		a unique name given by the user, used for caching
+  + path	the search path to find the template file
+  + group	the template's group, used for defaults and caching
+  + reload	specifies whether templates should be reloaded
+  + debug	debug flag, increase execution verbosity
 
-key = this is a name associated with Text::FastTemplate object.  It is determined by the user and should be unique.
-It was designed to be used in conjuntion with the preload() class method.
+=over 4
 
-path = this is a list of directories that are to be searched with a relative pathname is used as in 'file'.
+=item file
 
-group = this designates the group for which to use defaults and object cache.  Each group has its own object cache
-which enables the caller to use the same KEY in different groups.
+This is the name of the template to be loaded.  It can be an absolute or relative
+pathname.  If a relative pathname is used then the directories specified in 'path'
+are searched.  If 'path' is not specified then the current working directory for the
+process is searched.
 
-reload = by setting this to true, Text::FastTemplate will reload all of the template files that are used by this
-template that have been modified.  It checks the mtime of the files.  So all that is necessary to force a reload is
-to 'touch' the file that should be reloaded.
+=item key
 
-debug = setting this to true prints some debugging information.  This is only partially useful.
+This is a name that the programmer associates with Text::FastTemplate object.  If
+groups are being used then the key needs to be unique within the template's assigned
+group.  It was to be used with the preload() class method.
 
-preload() = This class method simply loads a list of templates by instantiating an object [ new() ] for each
-template in the list that is passed to it.   This purpose of this method is to bypass the normal latency associated
-with reading and compiling a template the first time.  It expects an array-ref to a list of hash-references.
-The contents of these hashes are passed to new() one at a time.
+=item path
+
+This is a list of directories to be searched when a file is specified with a relative
+pathname.  The list of paths is passed in an ARRAY-REF.
+
+=item group
+
+This designates the group for which to use defaults and object cache.  Each group has
+its own object cache which enables the caller to use the same KEY in different
+groups.
+
+=item reload
+
+By setting this to true, Text::FastTemplate will reload all of the template files
+that are used by this template that have been modified.  It checks the mtime of the
+files.  So all that is necessary to force a reload is to 'touch' the file that should
+be reloaded.
+
+=item debug
+
+setting this to true prints some debugging information.  This is only partially
+useful.
+
+=back
+
+=head2 Another constructor: preload()
+
+This class method simply loads a list of templates by creating a Text::FastTemplate
+object [ new() ] for each template in the list that is passed to it.  This purpose of
+this method is to bypass the latency associated with reading and compiling a template
+the first time.  This method can be called in several ways.  But the most basic call
+requires an ARRAY-REF to a list of HASH-REFs.  These hashes are passed to new()
+iteratively.
 
     e.g.,
 
@@ -116,53 +192,74 @@ The contents of these hashes are passed to new() one at a time.
 	{ file => 'file3.txt', key => 'file3' },
     ]);
 
-p=head2 Object Methods
+preload() and new() differ significantl in that both the 'file' and 'key' attributes
+are required by the preload() constructor.  That is because it uses each template's 'key' as its
+index when it caches them.
 
-output() = These methods take the data provided by the user in a hash and plug it into the compiled template.
-output() returns a scalar that contains the resultant text.
+=head2 Grouping defaults: defaults()
 
-print() = This method actually sends the the output of output() to STDOUT.  This method might or might not be deleted
-in a future version unless a lot of people use it.  It might be better to save this for a derived class which can send
-the output to a customized file-handle.
+This is used to set default values for constructor attributes, 'path', 'reload' and
+'debug'.  These defaults values are used whenever a new object is instantiated.  It
+is useful during a preload phase of a program.  The For example,
+
+    Text::FastTemplate->defaults( path => [ '/apps/sales/pages' ]);
+    Text::FastTemplate->preload( [
+	{ file => 'page1.txt', key => 'page1' },
+	{ file => 'page2.txt', key => 'page2' },
+	]);
+
+If the 'group' attribute is sent to defaults() then these default values are assigned
+to the specified group so that, whenever that group is used in a succeeding
+constructor, the defaults that are assigned to that group are used to instantiate
+that object.  For example,
+
+    Text::FastTemplate->defaults(
+	group => 'example',
+	path => [ '/apps/mfg/pages', ],
+	reload => 1
+	);
+    Text::FastTemplate->new(
+	key => 'a', file => 'a.tpl', group => 'example');
+    Text::FastTemplate->new(
+	key => 'b', file => 'b.tpl', group => 'example');
+    Text::FastTemplate->new(
+	key => 'c', file => 'c.tpl', group => 'example');
+
+These calls assign the example 'path' and 'reload' values to the 'example' group.
+During the calls to new() in which the 'example' group is specified, those default
+values are used to instantiate the template objects.
+
+The 'group' attribute is not necessary since a default group, '_default', will be
+automatically assigned to the object without the caller's knowledge.
+
+=head2 Object methods with action: output(), print()
 
 These are identical:
 
     print $template->output( \%data);
     $template->print( \%data);
 
-=head2 Class Methods
+=over
 
-This is the last section about Text::FastTemplate methods because these methods are not required
+=item output()
 
-defaults() = this is used to set default values for constructor attributes, 'PATH', 'RELOAD' and 'DEBUG'.  these
-defaults values are used whenever a new object is instantiated.  It is useful during a preload phase of a program.  The 
-For example,
+These methods take the data provided by the user in a hash and plug it into the
+compiled template.  output() returns a scalar that contains the resultant text.
 
-    Text::FastTemplate->defaults( path => '/apps/sales/pages');
-    Text::FastTemplate->preload( [
-	{ file => 'page1.txt', key => 'page1' },
-	{ file => 'page2.txt', key => 'page2' },
-	]);
+=item print()
 
-If the 'GROUP' attribute is sent to defaults() then these default values are assigned to the specified group so that, whenever
-that group is used in a succeeding constructor, the defaults that are assigned to that group are used to instantiate that
-object.  For example,
+This method actually sends the the output of output() to STDOUT.  This method might
+or might not be deleted in a future version unless a lot of people use it.  It might
+be better to save this for a derived class which can send the output to a customized
+file-handle.
 
-    Text::FastTemplate->defaults( group => 'example', path => '/apps/mfg/pages', reload => 1);
-    Text::FastTemplate->new( key => 'a', file => 'a.tpl', group => 'example');
-    Text::FastTemplate->new( key => 'b', file => 'b.tpl', group => 'example');
-    Text::FastTemplate->new( key => 'c', file => 'c.tpl', group => 'example');
-
-These calls assign the example 'path' and 'reload' values to the 'example' group.  During the calls to new() in which the
-'example' group is specified, those default values are used to instantiate the template objects.
-
-This attribute is not necessary since a default group, '_default', will be automatically assigned to the object without the
-caller's knowledge.
+=back
 
 =head1 TEMPLATE SYNTAX
 
-The syntax of Text::FastTemplate is simple.  Those who are familiar with the C-prepocessor will recognize the similarity.
-Here is an example of a template that uses everything Text::FastTemplate offers.
+The syntax of Text::FastTemplate is simple.  Those who are familiar with the
+C-prepocessor will recognize the similarity.  Here is an example of a template that
+uses everything Text::FastTemplate offers.
 
 	This is a ##A_SIMPLE_MACRO##
 
@@ -182,52 +279,63 @@ Here is an example of a template that uses everything Text::FastTemplate offers.
 
 Templates are processed in two ways.
 
-=over 4
+=over
 
-=item 1.
+=item *
 
 macroes are substituted into the text.
 
-=item 2.
+=item *
 
 statements are processed.
 
 =back
 
-Macro substition is performed anywhere in the text of the template.  They are case-sensitive.
+Macro substition is performed anywhere in the text of the template.  They are
+case-sensitive.
 
-Statements are line-oriented.  That means that a statement must exist on any lines by itself; a statement cannot be embedded
-in the actual content.
+Statements are line-oriented.  That means that a statement must exist on any lines by
+itself; a statement cannot be embedded in the actual content.
 
-A statement is comprised of a keyword and a macro argument, if one is required.  Whereas the macroes are case-sensitive
-in all contexts, keywords are case-insensitive.
+However, statements can be continued on separate lines by using the backslash.  Also,
+the statement doesn't need to start at the left margin.
 
-Statements can be continued on separate lines by using the backslash.
-Also, the statement doesn't need to start at the left margin.
+A statement is comprised of a keyword and a macro argument, if one is required.
+Whereas the macroes are case-sensitive in all contexts, keywords are
+case-insensitive.  The exception to this are #if and #elsif which accept any perl
+expressions that is accepted in perl's if and elsif statements.
 
-Text::FastTemplate offers the following keywords: B<#include>, B<#if>, B<#elsif>, B<#else>, B<#endif>, B<#for> and B<#endfor>.
+Text::FastTemplate offers the following keywords:
+
+	+ #include
+	+ #if, #elsif, #else and #endif
+	+ #for and #endfor
+
 They are described in detail below.
 
 =head2 Macro Syntax
 
-Very simply, Text::FastTemplate identifies a macro as a word bounded by double-hashes, '##'.  Macroes are
-case-sensitive.  The regular expression looks like this,
+Very simply, Text::FastTemplate identifies a macro as a word bounded by
+double-hashes, '##'.  Macroes are case-sensitive.  The regular expression looks like
+this,
 
 	$macro =~ m/##\w+?##/
 
-If a template uses a macro named 'A_SIMPLE_MACRO' then it will refer to that macro in its text as '##A_SIMPLE_MACRO##'.
-In the program that uses this template, this macro will be referred to in a hash by its real name, 'A_SIMPLE_MACRO'.
+If a template uses a macro named 'A_SIMPLE_MACRO' then it will refer to that macro in
+its text as '##A_SIMPLE_MACRO##'.  In the program that uses this template, this macro
+will be referred to in a hash by its real name, 'A_SIMPLE_MACRO'.
 
 Here is an example.
 
 	This is a ##A_SIMPLE_MACRO##
 
-If we now assign some text, "lousy example", to the macro 'A_SIMPLE_MACRO' in our data structure that we pass to this
-template then the output will look like this.
+If we now assign some text, "lousy example", to the macro 'A_SIMPLE_MACRO' in our
+data structure that we pass to this template then the output will look like this.
 
 	This is a lousy example
 
-[ The ability to specify a delimiter different than '##' might be provided in a future version. ]
+[ The ability to specify a delimiter different than '##' might be provided in a
+future version. ]
 
 =head2 #include
 
@@ -235,20 +343,23 @@ Other templates can be included by a template.
 
 	#include 'filename' | "filename" | filename
 
-The name of the file can be a relative or absolute pathname, just as with the 'file' constructor attribute.  If a
-relative pathname is used then the same rules apply as during object instanatation.  The 'path' of the including
-object, if provided, is searched; otherwise, the current working directory of the script is searched.
+The name of the file can be a relative or absolute pathname, just as with the 'file'
+constructor attribute.  If a relative pathname is used then the same rules apply as
+during object instanatation.  The 'path' of the including object, if provided, is
+searched; otherwise, the current working directory of the script is searched.
 
-The filename can be enclosed in single quotes, double quotes or not at all.  All are legal. Currently, a macro
-B<cannot> be used; this feature is in the queue.
+The filename can be enclosed in single quotes, double quotes or not at all.  All are
+legal. Currently, a macro B<cannot> be used; this feature is in the queue.
 
-Beware of #include loops!!!  This will cause infinite recursion in your program.  Currently, Text::FastTemplate
-does not check for infinite recursion; this, too, is in the queue.
+Beware of #include loops!!!  This will cause infinite recursion in your program.
+Currently, Text::FastTemplate does not check for infinite recursion; this, too, is in
+the queue.
 
 =head2 #if / #elsif / #else / #endif
 
-The condition statements should be obvious.  They correspond directly with the Perl statements.  The #if and
-#elsif statements require arguments.  They don't need to be macroes; but they are not otherwise very useful.
+The condition statements should be obvious.  They correspond directly with the Perl
+statements.  The #if and #elsif statements require arguments.  They don't need to be
+macroes; but they are not otherwise very useful.
 
 	#if ##A_FACT##
 	  It is true.  See?  ##A_FACT##
@@ -258,10 +369,12 @@ The condition statements should be obvious.  They correspond directly with the P
 	  What is it then?
 	#endif
 
-The condition statements are the exception to the separation of the presentation and the application.
+The condition statements are the exception to the separation of the presentation and
+the application.
 
-That is because the argument given in a condition statement can be a full-fledged Perl expression.  The only
-difference is that only scalars are available and only via the macro syntax.  You might use something like this:
+That is because the argument given in a condition statement can be a full-fledged
+Perl expression.  The only difference is that only scalars are available and only via
+the macro syntax.  You might use something like this:
 
 	#if ##PAGE## eq 'home'
 		highlight the home tab
@@ -279,8 +392,9 @@ This is really not a design flaw; it was just easier to implement it this way.
 
 =head2 #for / #endfor
 
-The repitition or looping construct used by Text::FastTemplate is the #for / #endfor statement.  This is not part of
-the C-preprocessor syntax; but the resemblance is still there.
+The repitition or looping construct used by Text::FastTemplate is the #for / #endfor
+statement.  This is not part of the C-preprocessor syntax; but the resemblance is
+still there.
 
 	#for ##A_FOR_MACRO##
 	  some text; survey says, "##SOME_TEXT##"
@@ -288,18 +402,20 @@ the C-preprocessor syntax; but the resemblance is still there.
 
 =head2 #for LOOP_ID
 
-There is one special feature about the #for loop that needs to be mentioned.  Every #for loop has a special
-macro that corresponds to the number of times that the loop has iterated.  This is called the LOOP_ID.  To
-access the LOOP_ID inside of the #for loop, simply concatenate the #for macro and '_LOOP_ID'.  For example,
+There is one special feature about the #for loop that needs to be mentioned.  Every
+#for loop has a special macro that corresponds to the number of times that the loop
+has iterated.  This is called the LOOP_ID.  To access the LOOP_ID inside of the #for
+loop, simply concatenate the #for macro and '_LOOP_ID'.  For example,
 
 	#for ##A_FOR_MACRO##
 
-uses a macro named 'A_FOR_MACRO'.  Concatentate this with '_LOOP_ID' and the result is
+uses a macro named 'A_FOR_MACRO'.  Concatentate this with '_LOOP_ID' and the result
+is
 
 	A_FOR_MACRO_LOOP_ID
 
-This special macro can be used to access to number of iterations of the #for loop.  For example, if the following
-loop iterates three times
+This special macro can be used to access to number of iterations of the #for loop.
+For example, if the following loop iterates three times
 
 	#for ##A_FOR_MACRO##
 	  iteration ##A_FOR_MACRO_LOOP_ID##
@@ -315,66 +431,87 @@ Clear?
 
 =head1 TEMPLATE DATA STRUCTURE
 
-A data structure that might be used for the above examples might look like this.  It is a hash-ref and it is the basic
-data structure used by Text::FastTemplate.  The keys of this hash-ref correspond with the template's macroes.  The
-values for the hash-ref are scalars except for the #for macro.
+A data structure that might be used for the above examples might look like this.  It
+is a hash-ref and it is the basic data structure used by Text::FastTemplate.  The
+keys of this hash-ref correspond with the template's macroes.  The values for the
+hash-ref are scalars except for the #for macro.
 
 The #for macro uses a array-ref that contains a list of these hash-refs.
 
 	{ A SIMPLE_MACRO => 'fact',
 	  A_FACT => 1,
-	  A_FOR_MACRO => [			# a #for loop
+	  A_FOR_MACRO => [ # a #for loop
 	    { SOME_TEXT => "Iteration #1"},
 	    { SOME_TEXT => "Iteration #2"}
 	    ]
 	}
 
-Anybody that is familiar with B<HTML::Template> should recognize this scheme.
-
-Like mud, right?
-
-=head1 EXAMPLES
-
-None yet.  Look in  the ./examples directory...later.
-
 =head1 BUGS
 
-These bugs were deemed to be acceptable for release since they are currently in production on
-several web sites.  They have been targeted for elimination.
+These bugs were deemed to be acceptable for release since they are currently in
+production on several web sites.  They have been targeted for elimination.
 
-=over 4
+=over
 
-=item 1.
+=item *
 
-Macro scopes are poorly handled.  Consider a #for loop around some HTML tags that refer to a ##BGCOLOR## macro that is
-commonly used.  The #for loop will not access the ##BGCOLOR## macro used outside of the loop.  The ##BGCOLOR##
-macro needs to be included in the data that is passed to the #for loop.
+Macro scopes are poorly handled.  Consider a #for loop around some HTML tags that
+refer to a ##BGCOLOR## macro that is commonly used.  The #for loop will not access
+the ##BGCOLOR## macro used outside of the loop.  The ##BGCOLOR## macro needs to be
+included in the data that is passed to the #for loop.
 
-=item 2.
+=item *
 
-Infinite recursion with the #include statement is not checked.  Care should be taken to avoid it.  One of the easiest cases in which this might happen is with circular inclusions.  This is the same problem as with Perl's circular references and garbage collection.  It shouldn't be new to anyone.
+Infinite recursion with the #include statement is not checked.  Care should be taken
+to avoid it.  One of the easiest cases in which this might happen is with circular
+inclusions.  This is the same problem as with Perl's circular references and garbage
+collection.  It shouldn't be new to anyone.
 
-=item 3.
+=item *
 
-If the any line of the actual content of a template starts with a keyword then it will be processed by Text::FastTemplate.
-
-=item 4.
-
-Error handling could be much better.
+If the any line of the actual content of a template starts with a keyword then it
+will be processed by Text::FastTemplate.
 
 =back
 
 =head1 FUTURE ENHANCEMENTS
 
-=over 4
+=over
 
-=item 1.
+=item *
 
-Add "#define" and "#undef" to template syntax; will require that handling of macro scope be improved.
+Currently, files and templates have a 1-to-1 relationship.  In the future, they might
+have a many-to-1 relationship by using real "templates" instead of "files".  It will
+be necessary to do this before the following enhancement can be accomplished.
 
-=item 2.
+=item *
 
-Add "source" attribute so that strings and arrays can be used for templates.
+Add "#template" to be able to define several templates in a single file, thus
+enabling a designer to consolidate them into a template library.  This would approach
+Template::Toolkit's widget plug-in feature but without the ability to pass arguments
+to them.  That is a very cool feature because the designer can control more parameters.
+
+=item *
+
+Just as #include inserts a body of text from another template, it would be nice if a
+block of text could be "wrapped" in a text from another template.
+
+=item *
+
+Add "#define" and "#undef" to template syntax; will require that handling of macro
+scope be improved.
+
+=item *
+
+Add support for fixed-width macro substitution, similar to printf().
+
+=item *
+
+Error-handling _needs_ to be improved.
+
+=item *
+
+Add "source" attribute so that strings and arrays can be used for templates, maybe.
 
 =back
 
@@ -382,24 +519,24 @@ Add "source" attribute so that strings and arrays can be used for templates.
 
 Robert Lehr, bozzio@the-lehrs.com
 
-I certainly would appreciate any feedback from people that use it, including complaints, suggestions or patches.
-Even people that don't use it are welcome to send comments.
+I certainly would appreciate any feedback from people that use it, including
+complaints, suggestions or patches.  Even people that don't use it are welcome to
+send comments.
 
 =head1 COPYRIGHT & DISCLAIMER
 
-Copyright (c) 2001 Robert Lehr. All rights reserved.  This program is free software; you can redistribute it and/or
-modify it under the same terms as Perl itself.
+Copyright (c) 2001 Robert Lehr. All rights reserved.  This program is free software;
+you can redistribute it and/or modify it under the same terms as Perl itself.
 
-Caveat emptor.  Use this module at your own risk.  I will accept no responsibility any loss of any kind
-that is the direct or indirect result of the use of this module.
+Caveat emptor.  Use this module at your own risk.  I will accept no responsibility
+any loss of any kind that is the direct or indirect result of the use of this module.
 
 =head1 DEPENDENCIES
 
-Perl modules: Cwd, Carp;b
+Perl modules: Cwd, Carp
 
 =head1 SEE ALSO
 
 perl(1), perlref(1).
 
 =cut
-
